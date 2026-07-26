@@ -1,121 +1,137 @@
-return function(Window, Context)
-    local HttpService = game:GetService("HttpService")
-    local fullSaveFileName = Context.fullSaveFileName
-    local stopFlying = Context.stopFlying
-    local updateAttachment = Context.updateAttachment
+-- ======================================================================
+-- PHẦN 6: LOGIC SETTINGS VÀ SAVE/LOAD (NHÁNH 2)
+-- ======================================================================
 
-    local SettingsTab = Window:CreateTab("Cài đặt", 4483362458)
+local HttpService = game:GetService("HttpService")
 
-    SettingsTab:CreateSection("-cấu hình toàn bộ hệ thống")
-    SettingsTab:CreateButton({
-       Name = "Lưu Toàn Bộ GUI (Save All)",
-       Callback = function()
-           local savedPinnedNames = {}
-           if Context.hasPinnedPlayers() then
-               for _, p in ipairs(Context.pinnedOrder) do table.insert(savedPinnedNames, p.DisplayName .. " (" .. p.Name .. ")") end
-           end
-           
-           local config = {
-               speed = Context._G_speedValue,
-               sides = Context._G_sidesValue, 
-               dist = Context._G_distanceValue,
-               height = Context._G_heightValue,
-               fSpeed = Context._G_flySpeedValue,
-               pred = Context._G_predCoeffValue,
-               vel = Context._G_velCheckValue,
-               hModeStr = Context.currentHeightModeStr, dModeStr = Context.currentDirModeStr,
-               nModeStr = Context.currentNetModeStr, cModeStr = Context.currentCombatModeStr,
-               tC_Vis = Context.classicWidget.Visible, tN_Vis = Context.nearWidget.Visible,
-               tO_Vis = Context.orangeWidget.Visible, tP_Vis = Context.purpleWidget.Visible,
-               stud = Context.studOffset, m1 = Context.mode1Name, m2 = Context.mode2Name,
-               mV = Context.isMiniVoidVisible, mKB = Context.isMiniKBVisible,
-               pinnedList = savedPinnedNames,
-               noclip = Context.isNoclipEnabled,
-               
-               killAllActive = Context.killAllActive,
-               killAllMiniVis = Context.killAllWidget.Visible,
-               killAllDist = Context.killAll_TeleportDistance,
-               killAllDir = Context.killAll_DirectionMode,
+_G.HubState = _G.HubState or {}
+_G.HubLogic = _G.HubLogic or {}
 
-               widgetPositions = {
-                   classic = {Context.classicWidget.Position.X.Scale, Context.classicWidget.Position.X.Offset, Context.classicWidget.Position.Y.Scale, Context.classicWidget.Position.Y.Offset},
-                   near = {Context.nearWidget.Position.X.Scale, Context.nearWidget.Position.X.Offset, Context.nearWidget.Position.Y.Scale, Context.nearWidget.Position.Y.Offset},
-                   orange = {Context.orangeWidget.Position.X.Scale, Context.orangeWidget.Position.X.Offset, Context.orangeWidget.Position.Y.Scale, Context.orangeWidget.Position.Y.Offset},
-                   purple = {Context.purpleWidget.Position.X.Scale, Context.purpleWidget.Position.X.Offset, Context.purpleWidget.Position.Y.Scale, Context.purpleWidget.Position.Y.Offset},
-                   killAll = {Context.killAllWidget.Position.X.Scale, Context.killAllWidget.Position.X.Offset, Context.killAllWidget.Position.Y.Scale, Context.killAllWidget.Position.Y.Offset},
-                   void = {Context.voidWidget.Position.X.Scale, Context.voidWidget.Position.X.Offset, Context.voidWidget.Position.Y.Scale, Context.voidWidget.Position.Y.Offset},
-                   kb = {Context.kbWidget.Position.X.Scale, Context.kbWidget.Position.X.Offset, Context.kbWidget.Position.Y.Scale, Context.kbWidget.Position.Y.Offset}
-               }
-           }
-           if writefile then
-               pcall(function() writefile(fullSaveFileName, HttpService:JSONEncode(config)) end)
-           end
-       end,
-    })
+-- Hàm lưu toàn bộ cấu hình hệ thống
+_G.HubLogic.SaveAllConfig = function()
+    local w = _G.HubState.Widgets or {}
+    
+    local savedPinnedNames = {}
+    if _G.HubLogic.HasPinnedPlayers and _G.HubLogic.HasPinnedPlayers() then
+        for _, p in ipairs(_G.HubState.pinnedOrder) do 
+            table.insert(savedPinnedNames, p.DisplayName .. " (" .. p.Name .. ")") 
+        end
+    end
+    
+    local config = {
+        speed = _G.HubState._G_speedValue,
+        sides = _G.HubState._G_sidesValue, 
+        dist = _G.HubState._G_distanceValue,
+        height = _G.HubState._G_heightValue,
+        fSpeed = _G.HubState._G_flySpeedValue,
+        pred = _G.HubState._G_predCoeffValue,
+        vel = _G.HubState._G_velCheckValue,
+        hModeStr = _G.HubState.currentHeightModeStr, 
+        dModeStr = _G.HubState.currentDirModeStr,
+        nModeStr = _G.HubState.currentNetModeStr, 
+        cModeStr = _G.HubState.currentCombatModeStr,
+        tC_Vis = w.classic and w.classic.Visible or false, 
+        tN_Vis = w.near and w.near.Visible or false,
+        tO_Vis = w.orange and w.orange.Visible or false, 
+        tP_Vis = w.purple and w.purple.Visible or false,
+        stud = _G.HubState.studOffset, 
+        m1 = _G.HubState.mode1Name, 
+        m2 = _G.HubState.mode2Name,
+        mV = _G.HubState.isMiniVoidVisible, 
+        mKB = _G.HubState.isMiniKBVisible,
+        pinnedList = savedPinnedNames,
+        noclip = _G.HubState.isNoclipEnabled,
+        
+        killAllActive = _G.HubState.killAllActive,
+        killAllMiniVis = w.killAll and w.killAll.Visible or false,
+        killAllDist = _G.HubState.killAll_TeleportDistance,
+        killAllDir = _G.HubState.killAll_DirectionMode,
 
-    SettingsTab:CreateButton({
-        Name = "Tải Lại Toàn Bộ GUI (Load All)",
-        Callback = function()
-            if readfile and isfile then
-                local isExist = false
-                pcall(function() isExist = isfile(fullSaveFileName) end)
-                if isExist then
-                    local success, parsed = pcall(function() return HttpService:JSONDecode(readfile(fullSaveFileName)) end)
-                    if success and type(parsed) == "table" then
-                        if Context.Input_Speed then Context.Input_Speed:Set(tostring(parsed.speed or 90)) end
-                        if Context.Input_Sides then Context.Input_Sides:Set(tostring(parsed.sides or 0)) end 
-                        if Context.Input_Dist then Context.Input_Dist:Set(tostring(parsed.dist or 4.5)) end
-                        if Context.Input_Height then Context.Input_Height:Set(tostring(parsed.height or 4.5)) end
-                        if Context.Input_Chase then Context.Input_Chase:Set(tostring(parsed.fSpeed or 250)) end
-                        if Context.Input_Pred then Context.Input_Pred:Set(tostring(parsed.pred or 1)) end
-                        if Context.Input_Vel then Context.Input_Vel:Set(tostring(parsed.vel or 2)) end
+        -- Lưu vị trí (Position) của toàn bộ các Mini GUI
+        widgetPositions = {
+            classic = w.classic and {w.classic.Position.X.Scale, w.classic.Position.X.Offset, w.classic.Position.Y.Scale, w.classic.Position.Y.Offset},
+            near = w.near and {w.near.Position.X.Scale, w.near.Position.X.Offset, w.near.Position.Y.Scale, w.near.Position.Y.Offset},
+            orange = w.orange and {w.orange.Position.X.Scale, w.orange.Position.X.Offset, w.orange.Position.Y.Scale, w.orange.Position.Y.Offset},
+            purple = w.purple and {w.purple.Position.X.Scale, w.purple.Position.X.Offset, w.purple.Position.Y.Scale, w.purple.Position.Y.Offset},
+            killAll = w.killAll and {w.killAll.Position.X.Scale, w.killAll.Position.X.Offset, w.killAll.Position.Y.Scale, w.killAll.Position.Y.Offset},
+            void = w.void and {w.void.Position.X.Scale, w.void.Position.X.Offset, w.void.Position.Y.Scale, w.void.Position.Y.Offset},
+            kb = w.kb and {w.kb.Position.X.Scale, w.kb.Position.X.Offset, w.kb.Position.Y.Scale, w.kb.Position.Y.Offset}
+        }
+    }
 
-                        if Context.Drop_HeightMode then Context.Drop_HeightMode:Set({parsed.hModeStr or "MODE: TRÊN TRỜI"}) end
-                        if Context.Drop_DirMode then Context.Drop_DirMode:Set({parsed.dModeStr or "ORBIT (XOAY)"}) end
-                        if Context.Drop_NetMode then Context.Drop_NetMode:Set({parsed.nModeStr or "NET: NORMAL"}) end
-                        if Context.Drop_CombatMode then Context.Drop_CombatMode:Set({parsed.cModeStr or "MODE: OFF (TS/PRED)"}) end
+    if writefile then
+        pcall(function() 
+            writefile(_G.HubState.fullSaveFileName or "FullGui_Save.json", HttpService:JSONEncode(config)) 
+        end)
+    end
+end
 
-                        if Context.Toggle_ClassicTracker then Context.Toggle_ClassicTracker:Set(parsed.tC_Vis == nil and false or parsed.tC_Vis) end
-                        if Context.Toggle_NearTracker then Context.Toggle_NearTracker:Set(parsed.tN_Vis == nil and false or parsed.tN_Vis) end
-                        if Context.Toggle_OrangeFly then Context.Toggle_OrangeFly:Set(parsed.tO_Vis == nil and false or parsed.tO_Vis) end
-                        if Context.Toggle_PurpleFly then Context.Toggle_PurpleFly:Set(parsed.tP_Vis == nil and false or parsed.tP_Vis) end
-                        if Context.Toggle_Noclip then Context.Toggle_Noclip:Set(parsed.noclip == nil and false or parsed.noclip) end
+-- Hàm khôi phục toàn bộ cấu hình đã lưu
+_G.HubLogic.LoadAllConfig = function(UIElements)
+    if not (readfile and isfile) then return end
+    
+    local fileName = _G.HubState.fullSaveFileName or "FullGui_Save.json"
+    local isExist = false
+    pcall(function() isExist = isfile(fileName) end)
+    
+    if isExist then
+        local success, parsed = pcall(function() return HttpService:JSONDecode(readfile(fileName)) end)
+        if success and type(parsed) == "table" then
+            UIElements = UIElements or {}
 
-                        if Context.InputStudsUI then Context.InputStudsUI:Set(tostring(parsed.stud or 0)) end
-                        if Context.DropNgangUI then Context.DropNgangUI:Set({parsed.m1 or "Hủy"}) end
-                        if Context.DropTrenUI then Context.DropTrenUI:Set({parsed.m2 or "Hủy"}) end
-                        if Context.ToggleVoidUI then Context.ToggleVoidUI:Set(parsed.mV == nil and true or parsed.mV) end
-                        if Context.ToggleKBUI then Context.ToggleKBUI:Set(parsed.mKB == nil and true or parsed.mKB) end
-                        
-                        Context.killAllActive = parsed.killAllActive == nil and false or parsed.killAllActive
-                        Context.killAllWidget.Visible = parsed.killAllMiniVis == nil and false or parsed.killAllMiniVis
-                        Context.killAll_TeleportDistance = parsed.killAllDist or 1.5
-                        Context.killAll_DirectionMode = parsed.killAllDir or "đằng sau"
-                        
-                        if Context.Toggle_KillAllMiniVis then Context.Toggle_KillAllMiniVis:Set(Context.killAllWidget.Visible) end
-                        
-                        if Context.PinnedDropdown and parsed.pinnedList then
-                            Context.PinnedDropdown:Set(parsed.pinnedList)
-                        end
+            if UIElements.Input_Speed then UIElements.Input_Speed:Set(tostring(parsed.speed or 90)) end
+            if UIElements.Input_Sides then UIElements.Input_Sides:Set(tostring(parsed.sides or 0)) end 
+            if UIElements.Input_Dist then UIElements.Input_Dist:Set(tostring(parsed.dist or 4.5)) end
+            if UIElements.Input_Height then UIElements.Input_Height:Set(tostring(parsed.height or 4.5)) end
+            if UIElements.Input_Chase then UIElements.Input_Chase:Set(tostring(parsed.fSpeed or 250)) end
+            if UIElements.Input_Pred then UIElements.Input_Pred:Set(tostring(parsed.pred or 1)) end
+            if UIElements.Input_Vel then UIElements.Input_Vel:Set(tostring(parsed.vel or 2)) end
 
-                        if parsed.widgetPositions then
-                            local wp = parsed.widgetPositions
-                            if wp.classic then Context.classicWidget.Position = UDim2.new(wp.classic[1], wp.classic[2], wp.classic[3], wp.classic[4]) end
-                            if wp.near then Context.nearWidget.Position = UDim2.new(wp.near[1], wp.near[2], wp.near[3], wp.near[4]) end
-                            if wp.orange then Context.orangeWidget.Position = UDim2.new(wp.orange[1], wp.orange[2], wp.orange[3], wp.orange[4]) end
-                            if wp.purple then Context.purpleWidget.Position = UDim2.new(wp.purple[1], wp.purple[2], wp.purple[3], wp.purple[4]) end
-                            if wp.killAll then Context.killAllWidget.Position = UDim2.new(wp.killAll[1], wp.killAll[2], wp.killAll[3], wp.killAll[4]) end
-                            if wp.void then Context.voidWidget.Position = UDim2.new(wp.void[1], wp.void[2], wp.void[3], wp.void[4]) end
-                            if wp.kb then Context.kbWidget.Position = UDim2.new(wp.kb[1], wp.kb[2], wp.kb[3], wp.kb[4]) end
-                        end
+            if UIElements.Drop_HeightMode then UIElements.Drop_HeightMode:Set({parsed.hModeStr or "MODE: TRÊN TRỜI"}) end
+            if UIElements.Drop_DirMode then UIElements.Drop_DirMode:Set({parsed.dModeStr or "ORBIT (XOAY)"}) end
+            if UIElements.Drop_NetMode then UIElements.Drop_NetMode:Set({parsed.nModeStr or "NET: NORMAL"}) end
+            if UIElements.Drop_CombatMode then UIElements.Drop_CombatMode:Set({parsed.cModeStr or "MODE: OFF (TS/PRED)"}) end
 
-                        Context.isAttached = false
-                        Context.targetModeIndex = 3 
-                        stopFlying()
-                        updateAttachment()
-                    end
-                end
+            if UIElements.Toggle_ClassicTracker then UIElements.Toggle_ClassicTracker:Set(parsed.tC_Vis == nil and false or parsed.tC_Vis) end
+            if UIElements.Toggle_NearTracker then UIElements.Toggle_NearTracker:Set(parsed.tN_Vis == nil and false or parsed.tN_Vis) end
+            if UIElements.Toggle_OrangeFly then UIElements.Toggle_OrangeFly:Set(parsed.tO_Vis == nil and false or parsed.tO_Vis) end
+            if UIElements.Toggle_PurpleFly then UIElements.Toggle_PurpleFly:Set(parsed.tP_Vis == nil and false or parsed.tP_Vis) end
+            if UIElements.Toggle_Noclip then UIElements.Toggle_Noclip:Set(parsed.noclip == nil and false or parsed.noclip) end
+
+            if UIElements.InputStudsUI then UIElements.InputStudsUI:Set(tostring(parsed.stud or 0)) end
+            if UIElements.DropNgangUI then UIElements.DropNgangUI:Set({parsed.m1 or "Hủy"}) end
+            if UIElements.DropTrenUI then UIElements.DropTrenUI:Set({parsed.m2 or "Hủy"}) end
+            if UIElements.ToggleVoidUI then UIElements.ToggleVoidUI:Set(parsed.mV == nil and true or parsed.mV) end
+            if UIElements.ToggleKBUI then UIElements.ToggleKBUI:Set(parsed.mKB == nil and true or parsed.mKB) end
+            
+            _G.HubState.killAllActive = parsed.killAllActive == nil and false or parsed.killAllActive
+            _G.HubState.killAll_TeleportDistance = parsed.killAllDist or 1.5
+            _G.HubState.killAll_DirectionMode = parsed.killAllDir or "đằng sau"
+            
+            local w = _G.HubState.Widgets or {}
+            if w.killAll then w.killAll.Visible = parsed.killAllMiniVis == nil and false or parsed.killAllMiniVis end
+            if UIElements.Toggle_KillAllMiniVis and w.killAll then UIElements.Toggle_KillAllMiniVis:Set(w.killAll.Visible) end
+            
+            if UIElements.PinnedDropdown and parsed.pinnedList then
+                UIElements.PinnedDropdown:Set(parsed.pinnedList)
             end
-        end,
-    })
+
+            -- Khôi phục vị trí Mini GUI
+            if parsed.widgetPositions then
+                local wp = parsed.widgetPositions
+                if wp.classic and w.classic then w.classic.Position = UDim2.new(wp.classic[1], wp.classic[2], wp.classic[3], wp.classic[4]) end
+                if wp.near and w.near then w.near.Position = UDim2.new(wp.near[1], wp.near[2], wp.near[3], wp.near[4]) end
+                if wp.orange and w.orange then w.orange.Position = UDim2.new(wp.orange[1], wp.orange[2], wp.orange[3], wp.orange[4]) end
+                if wp.purple and w.purple then w.purple.Position = UDim2.new(wp.purple[1], wp.purple[2], wp.purple[3], wp.purple[4]) end
+                if wp.killAll and w.killAll then w.killAll.Position = UDim2.new(wp.killAll[1], wp.killAll[2], wp.killAll[3], wp.killAll[4]) end
+                if wp.void and w.void then w.void.Position = UDim2.new(wp.void[1], wp.void[2], wp.void[3], wp.void[4]) end
+                if wp.kb and w.kb then w.kb.Position = UDim2.new(wp.kb[1], wp.kb[2], wp.kb[3], wp.kb[4]) end
+            end
+
+            _G.HubState.isAttached = false
+            _G.HubState.targetModeIndex = 3 
+            if _G.HubLogic.StopFlying then _G.HubLogic.StopFlying() end
+            if _G.HubLogic.UpdateAttachment then _G.HubLogic.UpdateAttachment() end
+        end
+    end
 end
