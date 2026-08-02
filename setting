@@ -19,6 +19,7 @@ _G.HubLogic.SaveAllConfig = function()
     end
     
     local config = {
+        -- Main Tab
         speed = _G.HubState._G_speedValue,
         sides = _G.HubState._G_sidesValue, 
         dist = _G.HubState._G_distanceValue,
@@ -34,18 +35,38 @@ _G.HubLogic.SaveAllConfig = function()
         tN_Vis = w.near and w.near.Visible or false,
         tO_Vis = w.orange and w.orange.Visible or false, 
         tP_Vis = w.purple and w.purple.Visible or false,
-        stud = _G.HubState.studOffset, 
+        noclip = _G.HubState.isNoclipEnabled,
+        visualServer = _G.HubState.isVisualServerEnabled,
+        
+        -- One Shot Tab
+        stud = _G.HubState.studOffset,
+        attachDuration = _G.HubState.attachDuration,
         m1 = _G.HubState.mode1Name, 
         m2 = _G.HubState.mode2Name,
         mV = _G.HubState.isMiniVoidVisible, 
         mKB = _G.HubState.isMiniKBVisible,
-        pinnedList = savedPinnedNames,
-        noclip = _G.HubState.isNoclipEnabled,
-        
+
+        -- Kill All Tab
         killAllActive = _G.HubState.killAllActive,
         killAllMiniVis = w.killAll and w.killAll.Visible or false,
+        touchFling = _G.HubState.isTouchFlingEnabled,
+        antiFling = _G.HubState.isAntiFlingEnabled,
+        killAllDelay = _G.HubState.killAll_Delay,
+        killAllFirstDead = _G.HubState.killAll_FirstDeadCount,
+        killAllLowHealth = _G.HubState.killAll_LowHealthCount,
         killAllDist = _G.HubState.killAll_TeleportDistance,
         killAllDir = _G.HubState.killAll_DirectionMode,
+
+        -- Target List Tab
+        pinnedList = savedPinnedNames,
+
+        -- Misc Tab
+        tEspItem_Vis = w.espItem and w.espItem.Visible or false,
+        espItemsGlow = _G.HubState.espItemsGlow,
+        espItemsName = _G.HubState.espItemsName,
+        tEspNpc_Vis = w.espNpc and w.espNpc.Visible or false,
+        espNpcGlow = _G.HubState.espNpcGlow,
+        espNpcName = _G.HubState.espNpcName,
 
         -- Lưu vị trí (Position) của toàn bộ các Mini GUI
         widgetPositions = {
@@ -55,7 +76,9 @@ _G.HubLogic.SaveAllConfig = function()
             purple = w.purple and {w.purple.Position.X.Scale, w.purple.Position.X.Offset, w.purple.Position.Y.Scale, w.purple.Position.Y.Offset},
             killAll = w.killAll and {w.killAll.Position.X.Scale, w.killAll.Position.X.Offset, w.killAll.Position.Y.Scale, w.killAll.Position.Y.Offset},
             void = w.void and {w.void.Position.X.Scale, w.void.Position.X.Offset, w.void.Position.Y.Scale, w.void.Position.Y.Offset},
-            kb = w.kb and {w.kb.Position.X.Scale, w.kb.Position.X.Offset, w.kb.Position.Y.Scale, w.kb.Position.Y.Offset}
+            kb = w.kb and {w.kb.Position.X.Scale, w.kb.Position.X.Offset, w.kb.Position.Y.Scale, w.kb.Position.Y.Offset},
+            espItem = w.espItem and {w.espItem.Position.X.Scale, w.espItem.Position.X.Offset, w.espItem.Position.Y.Scale, w.espItem.Position.Y.Offset},
+            espNpc = w.espNpc and {w.espNpc.Position.X.Scale, w.espNpc.Position.X.Offset, w.espNpc.Position.Y.Scale, w.espNpc.Position.Y.Offset}
         }
     }
 
@@ -79,6 +102,7 @@ _G.HubLogic.LoadAllConfig = function(UIElements)
         if success and type(parsed) == "table" then
             UIElements = UIElements or {}
 
+            -- 1. Tab Main
             if UIElements.Input_Speed then UIElements.Input_Speed:Set(tostring(parsed.speed or 90)) end
             if UIElements.Input_Sides then UIElements.Input_Sides:Set(tostring(parsed.sides or 0)) end 
             if UIElements.Input_Dist then UIElements.Input_Dist:Set(tostring(parsed.dist or 4.5)) end
@@ -97,24 +121,49 @@ _G.HubLogic.LoadAllConfig = function(UIElements)
             if UIElements.Toggle_OrangeFly then UIElements.Toggle_OrangeFly:Set(parsed.tO_Vis == nil and false or parsed.tO_Vis) end
             if UIElements.Toggle_PurpleFly then UIElements.Toggle_PurpleFly:Set(parsed.tP_Vis == nil and false or parsed.tP_Vis) end
             if UIElements.Toggle_Noclip then UIElements.Toggle_Noclip:Set(parsed.noclip == nil and false or parsed.noclip) end
+            if UIElements.Toggle_VisualServer then UIElements.Toggle_VisualServer:Set(parsed.visualServer == nil and false or parsed.visualServer) end
 
+            -- 2. Tab One Shot
             if UIElements.InputStudsUI then UIElements.InputStudsUI:Set(tostring(parsed.stud or 0)) end
+            if UIElements.InputTimeUI then UIElements.InputTimeUI:Set(tostring(parsed.attachDuration or 0)) end
             if UIElements.DropNgangUI then UIElements.DropNgangUI:Set({parsed.m1 or "Hủy"}) end
             if UIElements.DropTrenUI then UIElements.DropTrenUI:Set({parsed.m2 or "Hủy"}) end
             if UIElements.ToggleVoidUI then UIElements.ToggleVoidUI:Set(parsed.mV == nil and true or parsed.mV) end
             if UIElements.ToggleKBUI then UIElements.ToggleKBUI:Set(parsed.mKB == nil and true or parsed.mKB) end
             
+            -- 3. Tab Kill All
             _G.HubState.killAllActive = parsed.killAllActive == nil and false or parsed.killAllActive
             _G.HubState.killAll_TeleportDistance = parsed.killAllDist or 1.5
             _G.HubState.killAll_DirectionMode = parsed.killAllDir or "đằng sau"
+            _G.HubState.killAll_Delay = parsed.killAllDelay or 1
+            _G.HubState.killAll_FirstDeadCount = parsed.killAllFirstDead or 0
+            _G.HubState.killAll_LowHealthCount = parsed.killAllLowHealth or 0
             
+            if UIElements.Toggle_TouchFling then UIElements.Toggle_TouchFling:Set(parsed.touchFling == nil and false or parsed.touchFling) end
+            if UIElements.Toggle_AntiFling then UIElements.Toggle_AntiFling:Set(parsed.antiFling == nil and false or parsed.antiFling) end
+            if UIElements.Input_KillAllDelay then UIElements.Input_KillAllDelay:Set(tostring(parsed.killAllDelay or 1)) end
+            if UIElements.Input_KillAllFirstDead then UIElements.Input_KillAllFirstDead:Set(tostring(parsed.killAllFirstDead or 0)) end
+            if UIElements.Input_KillAllLowHealth then UIElements.Input_KillAllLowHealth:Set(tostring(parsed.killAllLowHealth or 0)) end
+            if UIElements.Input_KillAllDist then UIElements.Input_KillAllDist:Set(tostring(parsed.killAllDist or 1.5)) end
+            if UIElements.Drop_KillAllDir then UIElements.Drop_KillAllDir:Set({parsed.killAllDir or "đằng sau"}) end
+
             local w = _G.HubState.Widgets or {}
             if w.killAll then w.killAll.Visible = parsed.killAllMiniVis == nil and false or parsed.killAllMiniVis end
             if UIElements.Toggle_KillAllMiniVis and w.killAll then UIElements.Toggle_KillAllMiniVis:Set(w.killAll.Visible) end
             
+            -- 4. Tab Target List
             if UIElements.PinnedDropdown and parsed.pinnedList then
                 UIElements.PinnedDropdown:Set(parsed.pinnedList)
             end
+
+            -- 5. Tab Misc
+            if UIElements.Toggle_EspItem then UIElements.Toggle_EspItem:Set(parsed.tEspItem_Vis == nil and false or parsed.tEspItem_Vis) end
+            if UIElements.Toggle_EspItemGlow then UIElements.Toggle_EspItemGlow:Set(parsed.espItemsGlow == nil and false or parsed.espItemsGlow) end
+            if UIElements.Toggle_EspItemName then UIElements.Toggle_EspItemName:Set(parsed.espItemsName == nil and false or parsed.espItemsName) end
+            
+            if UIElements.Toggle_EspNpc then UIElements.Toggle_EspNpc:Set(parsed.tEspNpc_Vis == nil and false or parsed.tEspNpc_Vis) end
+            if UIElements.Toggle_EspNpcGlow then UIElements.Toggle_EspNpcGlow:Set(parsed.espNpcGlow == nil and false or parsed.espNpcGlow) end
+            if UIElements.Toggle_EspNpcName then UIElements.Toggle_EspNpcName:Set(parsed.espNpcName == nil and false or parsed.espNpcName) end
 
             -- Khôi phục vị trí Mini GUI
             if parsed.widgetPositions then
@@ -126,6 +175,8 @@ _G.HubLogic.LoadAllConfig = function(UIElements)
                 if wp.killAll and w.killAll then w.killAll.Position = UDim2.new(wp.killAll[1], wp.killAll[2], wp.killAll[3], wp.killAll[4]) end
                 if wp.void and w.void then w.void.Position = UDim2.new(wp.void[1], wp.void[2], wp.void[3], wp.void[4]) end
                 if wp.kb and w.kb then w.kb.Position = UDim2.new(wp.kb[1], wp.kb[2], wp.kb[3], wp.kb[4]) end
+                if wp.espItem and w.espItem then w.espItem.Position = UDim2.new(wp.espItem[1], wp.espItem[2], wp.espItem[3], wp.espItem[4]) end
+                if wp.espNpc and w.espNpc then w.espNpc.Position = UDim2.new(wp.espNpc[1], wp.espNpc[2], wp.espNpc[3], wp.espNpc[4]) end
             end
 
             _G.HubState.isAttached = false
