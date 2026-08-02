@@ -61,9 +61,11 @@ _G.HubLogic.SaveAllConfig = function()
         pinnedList = savedPinnedNames,
 
         -- Misc Tab
+        espItemsEnabled = _G.HubState.espItemsEnabled,
         tEspItem_Vis = w.espItem and w.espItem.Visible or false,
         espItemsGlow = _G.HubState.espItemsGlow,
         espItemsName = _G.HubState.espItemsName,
+        espNpcEnabled = _G.HubState.espNpcEnabled,
         tEspNpc_Vis = w.espNpc and w.espNpc.Visible or false,
         espNpcGlow = _G.HubState.espNpcGlow,
         espNpcName = _G.HubState.espNpcName,
@@ -164,6 +166,11 @@ _G.HubLogic.LoadAllConfig = function(UIElements)
             if UIElements.Toggle_EspNpc then UIElements.Toggle_EspNpc:Set(parsed.tEspNpc_Vis == nil and false or parsed.tEspNpc_Vis) end
             if UIElements.Toggle_EspNpcGlow then UIElements.Toggle_EspNpcGlow:Set(parsed.espNpcGlow == nil and false or parsed.espNpcGlow) end
             if UIElements.Toggle_EspNpcName then UIElements.Toggle_EspNpcName:Set(parsed.espNpcName == nil and false or parsed.espNpcName) end
+
+            -- Cập nhật trạng thái logic ESP Item sau khi load
+            if _G.HubLogic.SetEspItemsActive then
+                _G.HubLogic.SetEspItemsActive(parsed.espItemsEnabled == nil and false or parsed.espItemsEnabled)
+            end
 
             -- Khôi phục vị trí Mini GUI
             if parsed.widgetPositions then
