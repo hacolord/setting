@@ -26,6 +26,15 @@ _G.HubLogic.SaveAllConfig = function()
             end
         end
     end
+
+    local savedExceptionNames = {}
+    if _G.HubState.killAllExceptions then
+        for p, active in pairs(_G.HubState.killAllExceptions) do
+            if active and p and p.Parent then
+                table.insert(savedExceptionNames, p.DisplayName .. " (" .. p.Name .. ")")
+            end
+        end
+    end
     
     local config = {
         -- Combat Tab
@@ -66,6 +75,8 @@ _G.HubLogic.SaveAllConfig = function()
         killAllDist = _G.HubState.killAll_TeleportDistance,
         killAllDir = _G.HubState.killAll_DirectionMode,
         killAllVirtualOffset = _G.HubState.killAll_VirtualOffset,
+        killAllFlySpeed = _G.HubState.killAll_FlySpeed,
+        killAllMoveMode = _G.HubState.killAll_MoveMode,
 
         -- Fling Config
         flingTime = _G.HubState.flingTime,
@@ -96,6 +107,8 @@ _G.HubLogic.SaveAllConfig = function()
         avoidMode = _G.HubState.avoidMode,
         avoidTpDistance = _G.HubState.avoidTpDistance,
         avoidList = savedAvoidNames,
+        isKillAllExceptionEnabled = _G.HubState.isKillAllExceptionEnabled,
+        killAllExceptionsList = savedExceptionNames,
 
         -- Lưu vị trí (Position) của toàn bộ các Mini GUI
         widgetPositions = {
@@ -167,6 +180,8 @@ _G.HubLogic.LoadAllConfig = function(UIElements)
             _G.HubState.killAll_FirstDeadCount = parsed.killAllFirstDead or 0
             _G.HubState.killAll_LowHealthCount = parsed.killAllLowHealth or 0
             _G.HubState.killAll_VirtualOffset = parsed.killAllVirtualOffset or 0
+            _G.HubState.killAll_FlySpeed = parsed.killAllFlySpeed or 300
+            _G.HubState.killAll_MoveMode = parsed.killAllMoveMode or "Teleport"
             
             if UIElements.Toggle_TouchFling then UIElements.Toggle_TouchFling:Set(parsed.touchFling == nil and false or parsed.touchFling) end
             if UIElements.Toggle_AntiFling then UIElements.Toggle_AntiFling:Set(parsed.antiFling == nil and false or parsed.antiFling) end
@@ -176,6 +191,8 @@ _G.HubLogic.LoadAllConfig = function(UIElements)
             if UIElements.Input_KillAllDist then UIElements.Input_KillAllDist:Set(tostring(parsed.killAllDist or 1.5)) end
             if UIElements.Drop_KillAllDir then UIElements.Drop_KillAllDir:Set({parsed.killAllDir or "đằng sau"}) end
             if UIElements.Input_VirtualPos then UIElements.Input_VirtualPos:Set(tostring(parsed.killAllVirtualOffset or 0)) end
+            if UIElements.Input_KillAllFlySpeed then UIElements.Input_KillAllFlySpeed:Set(tostring(parsed.killAllFlySpeed or 300)) end
+            if UIElements.Drop_KillAllMoveMode then UIElements.Drop_KillAllMoveMode:Set({parsed.killAllMoveMode or "Teleport"}) end
 
             -- Fling Load
             _G.HubState.flingTime = parsed.flingTime or 1
@@ -223,6 +240,10 @@ _G.HubLogic.LoadAllConfig = function(UIElements)
             if UIElements.Drop_AvoidMode then UIElements.Drop_AvoidMode:Set({parsed.avoidMode == 2 and "Random" or "Cổ điển"}) end
             if UIElements.Input_AvoidTpDist then UIElements.Input_AvoidTpDist:Set(tostring(parsed.avoidTpDistance or 5)) end
             if UIElements.Drop_AvoidList and parsed.avoidList then UIElements.Drop_AvoidList:Set(parsed.avoidList) end
+
+            _G.HubState.isKillAllExceptionEnabled = parsed.isKillAllExceptionEnabled == nil and false or parsed.isKillAllExceptionEnabled
+            if UIElements.Toggle_Exception then UIElements.Toggle_Exception:Set(_G.HubState.isKillAllExceptionEnabled) end
+            if UIElements.Drop_KillAllExceptions and parsed.killAllExceptionsList then UIElements.Drop_KillAllExceptions:Set(parsed.killAllExceptionsList) end
 
             -- Cập nhật trạng thái logic ESP Item sau khi load
             if _G.HubLogic.SetEspItemsActive then
