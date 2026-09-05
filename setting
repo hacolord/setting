@@ -1,5 +1,5 @@
 -- ======================================================================
--- PHẦN 6: LOGIC SETTINGS VÀ SAVE/LOAD (NHÁNH 2 - BỔ SUNG SAVE/LOAD OTHERS)
+-- PHẦN 6: LOGIC SETTINGS VÀ SAVE/LOAD (NHÁNH 2)
 -- ======================================================================
 
 local HttpService = game:GetService("HttpService")
@@ -7,6 +7,7 @@ local HttpService = game:GetService("HttpService")
 _G.HubState = _G.HubState or {}
 _G.HubLogic = _G.HubLogic or {}
 
+-- Hàm lưu toàn bộ cấu hình hệ thống
 _G.HubLogic.SaveAllConfig = function()
     local w = _G.HubState.Widgets or {}
     
@@ -26,144 +27,228 @@ _G.HubLogic.SaveAllConfig = function()
         end
     end
 
-    local savedExceptionsNames = {}
+    local savedExceptionNames = {}
     if _G.HubState.killAllExceptions then
         for p, active in pairs(_G.HubState.killAllExceptions) do
             if active and p and p.Parent then
-                table.insert(savedExceptionsNames, p.DisplayName .. " (" .. p.Name .. ")")
+                table.insert(savedExceptionNames, p.DisplayName .. " (" .. p.Name .. ")")
             end
         end
     end
-
-    local configData = {
-        _G_speedValue = _G.HubState._G_speedValue,
-        _G_sidesValue = _G.HubState._G_sidesValue,
-        _G_distanceValue = _G.HubState._G_distanceValue,
-        _G_heightValue = _G.HubState._G_heightValue,
-        _G_flySpeedValue = _G.HubState._G_flySpeedValue,
-        _G_predCoeffValue = _G.HubState._G_predCoeffValue,
-        _G_velCheckValue = _G.HubState._G_velCheckValue,
+    
+    local config = {
+        -- Combat Tab
+        speed = _G.HubState._G_speedValue,
+        sides = _G.HubState._G_sidesValue, 
+        dist = _G.HubState._G_distanceValue,
+        height = _G.HubState._G_heightValue,
+        fSpeed = _G.HubState._G_flySpeedValue,
+        pred = _G.HubState._G_predCoeffValue,
+        vel = _G.HubState._G_velCheckValue,
+        hModeStr = _G.HubState.currentHeightModeStr, 
+        dModeStr = _G.HubState.currentDirModeStr,
+        nModeStr = _G.HubState.currentNetModeStr, 
+        cModeStr = _G.HubState.currentCombatModeStr,
+        tC_Vis = w.classic and w.classic.Visible or false, 
+        tN_Vis = w.near and w.near.Visible or false,
+        tO_Vis = w.orange and w.orange.Visible or false, 
+        tP_Vis = w.purple and w.purple.Visible or false,
+        noclip = _G.HubState.isNoclipEnabled,
+        visualServer = _G.HubState.isVisualServerEnabled,
         
-        selectedHeightMode = _G.HubState.selectedHeightMode,
-        selectedDirMode = _G.HubState.selectedDirMode,
-        selectedNetMode = _G.HubState.selectedNetMode,
-        tanSatMode = _G.HubState.tanSatMode,
-        
-        isNoclipEnabled = _G.HubState.isNoclipEnabled,
-        isVisualServerEnabled = _G.HubState.isVisualServerEnabled,
-        
-        studOffset = _G.HubState.studOffset,
+        -- One Shot Tab
+        stud = _G.HubState.studOffset,
         attachDuration = _G.HubState.attachDuration,
-        mode1Name = _G.HubState.mode1Name,
-        mode2Name = _G.HubState.mode2Name,
-        
-        killAll_Delay = _G.HubState.killAll_Delay,
-        killAll_FirstDeadCount = _G.HubState.killAll_FirstDeadCount,
-        killAll_LowHealthCount = _G.HubState.killAll_LowHealthCount,
-        killAll_FlySpeed = _G.HubState.killAll_FlySpeed,
-        killAll_MoveMode = _G.HubState.killAll_MoveMode,
-        killAll_TeleportDistance = _G.HubState.killAll_TeleportDistance,
-        killAll_DirectionMode = _G.HubState.killAll_DirectionMode,
-        killAll_VirtualOffset = _G.HubState.killAll_VirtualOffset,
-        isAntiFlingEnabled = _G.HubState.isAntiFlingEnabled,
-        
+        m1 = _G.HubState.mode1Name, 
+        m2 = _G.HubState.mode2Name,
+        mV = _G.HubState.isMiniVoidVisible, 
+        mKB = _G.HubState.isMiniKBVisible,
+
+        -- Kill All Tab
+        killAllActive = _G.HubState.killAllActive,
+        killAllMiniVis = w.killAll and w.killAll.Visible or false,
+        touchFling = _G.HubState.isTouchFlingEnabled,
+        antiFling = _G.HubState.isAntiFlingEnabled,
+        killAllDelay = _G.HubState.killAll_Delay,
+        killAllFirstDead = _G.HubState.killAll_FirstDeadCount,
+        killAllLowHealth = _G.HubState.killAll_LowHealthCount,
+        killAllDist = _G.HubState.killAll_TeleportDistance,
+        killAllDir = _G.HubState.killAll_DirectionMode,
+        killAllVirtualOffset = _G.HubState.killAll_VirtualOffset,
+        killAllFlySpeed = _G.HubState.killAll_FlySpeed,
+        killAllMoveMode = _G.HubState.killAll_MoveMode,
+
+        -- Fling Config
         flingTime = _G.HubState.flingTime,
         flingPower = _G.HubState.flingPower,
         flingVelocity = _G.HubState.flingVelocity,
-        
+        flingMiniVis = w.fling and w.fling.Visible or false,
+
+        -- Target List Tab
+        pinnedList = savedPinnedNames,
+
+        -- ESP Tab
         espPlayerEnabled = _G.HubState.espPlayerEnabled,
         espPlayerNameTag = _G.HubState.espPlayerNameTag,
         espPlayerGlow = _G.HubState.espPlayerGlow,
         espPlayerDistance = _G.HubState.espPlayerDistance,
         espPlayerTeamCheck = _G.HubState.espPlayerTeamCheck,
-        
         espItemsEnabled = _G.HubState.espItemsEnabled,
+        espItemSourcePath = _G.HubState.espItemSourcePath,
         espItemsGlow = _G.HubState.espItemsGlow,
         espItemsName = _G.HubState.espItemsName,
-        espItemSourcePath = _G.HubState.espItemSourcePath,
-        
-        espNpcEnabled = _G.HubState.espNpcEnabled,
-        espNpcGlow = _G.HubState.espNpcGlow,
-        espNpcName = _G.HubState.espNpcName,
-        espNpcSourcePath = _G.HubState.espNpcSourcePath,
 
+        -- Misc Tab & Avoid
+        isMiniGuiLocked = _G.HubState.isMiniGuiLocked,
+        musicID = _G.HubState.musicID,
+        isMusicEnabled = _G.HubState.isMusicEnabled,
         isAvoidEnabled = _G.HubState.isAvoidEnabled,
         avoidRange = _G.HubState.avoidRange,
         avoidMode = _G.HubState.avoidMode,
         avoidTpDistance = _G.HubState.avoidTpDistance,
-        savedAvoidNames = savedAvoidNames,
-        
-        isMusicEnabled = _G.HubState.isMusicEnabled,
-        musicID = _G.HubState.musicID,
-        
-        isMiniGuiLocked = _G.HubState.isMiniGuiLocked,
+        avoidList = savedAvoidNames,
         isKillAllExceptionEnabled = _G.HubState.isKillAllExceptionEnabled,
-        savedExceptionsNames = savedExceptionsNames,
+        killAllExceptionsList = savedExceptionNames,
 
-        -- BỔ SUNG CÁC TÍNH NĂNG TỪ OTHERS
-        isAutoTpGuiVisible = _G.HubState.isAutoTpGuiVisible,
+        -- BỔ SUNG: Save các chức năng từ "Others"
         isFloatGuiVisible = _G.HubState.isFloatGuiVisible,
-        BypassM1NoCD = _G.BypassM1NoCD,
-        selectedSettingMode = _G.HubState.selectedSettingMode,
-        
-        savedPinnedNames = savedPinnedNames,
-        
-        WidgetPositions = {
-            classic = w.classic and {X = w.classic.Position.X.Scale, XO = w.classic.Position.X.Offset, Y = w.classic.Position.Y.Scale, YO = w.classic.Position.Y.Offset},
-            near = w.near and {X = w.near.Position.X.Scale, XO = w.near.Position.X.Offset, Y = w.near.Position.Y.Scale, YO = w.near.Position.Y.Offset},
-            orange = w.orange and {X = w.orange.Position.X.Scale, XO = w.orange.Position.X.Offset, Y = w.orange.Position.Y.Scale, YO = w.orange.Position.Y.Offset},
-            purple = w.purple and {X = w.purple.Position.X.Scale, XO = w.purple.Position.X.Offset, Y = w.purple.Position.Y.Scale, YO = w.purple.Position.Y.Offset},
-            killAll = w.killAll and {X = w.killAll.Position.X.Scale, XO = w.killAll.Position.X.Offset, Y = w.killAll.Position.Y.Scale, YO = w.killAll.Position.Y.Offset},
-            void = w.void and {X = w.void.Position.X.Scale, XO = w.void.Position.X.Offset, Y = w.void.Position.Y.Scale, YO = w.void.Position.Y.Offset},
-            kb = w.kb and {X = w.kb.Position.X.Scale, XO = w.kb.Position.X.Offset, Y = w.kb.Position.Y.Scale, YO = w.kb.Position.Y.Offset},
-            fling = w.fling and {X = w.fling.Position.X.Scale, XO = w.fling.Position.X.Offset, Y = w.fling.Position.Y.Scale, YO = w.fling.Position.Y.Offset}
+        isAutoTpGuiVisible = _G.HubState.isAutoTpGuiVisible,
+        isPunchBypassEnabled = _G.HubState.isPunchBypassEnabled,
+
+        -- Lưu vị trí (Position) của toàn bộ các Mini GUI
+        widgetPositions = {
+            classic = w.classic and {w.classic.Position.X.Scale, w.classic.Position.X.Offset, w.classic.Position.Y.Scale, w.classic.Position.Y.Offset},
+            near = w.near and {w.near.Position.X.Scale, w.near.Position.X.Offset, w.near.Position.Y.Scale, w.near.Position.Y.Offset},
+            orange = w.orange and {w.orange.Position.X.Scale, w.orange.Position.X.Offset, w.orange.Position.Y.Scale, w.orange.Position.Y.Offset},
+            purple = w.purple and {w.purple.Position.X.Scale, w.purple.Position.X.Offset, w.purple.Position.Y.Scale, w.purple.Position.Y.Offset},
+            killAll = w.killAll and {w.killAll.Position.X.Scale, w.killAll.Position.X.Offset, w.killAll.Position.Y.Scale, w.killAll.Position.Y.Offset},
+            void = w.void and {w.void.Position.X.Scale, w.void.Position.X.Offset, w.void.Position.Y.Scale, w.void.Position.Y.Offset},
+            kb = w.kb and {w.kb.Position.X.Scale, w.kb.Position.X.Offset, w.kb.Position.Y.Scale, w.kb.Position.Y.Offset},
+            fling = w.fling and {w.fling.Position.X.Scale, w.fling.Position.X.Offset, w.fling.Position.Y.Scale, w.fling.Position.Y.Offset}
         }
     }
-    
-    local json = HttpService:JSONEncode(configData)
-    if writefile then
-        writefile("HubAllConfig.json", json)
-        print("[SUCCESS]: Đã lưu toàn bộ cấu hình hệ thống (bao gồm Others)!")
+
+    local success, encoded = pcall(function() return HttpService:JSONEncode(config) end)
+    if success and writefile then
+        pcall(function() writefile("TargetFlyHubConfig.json", encoded) end)
+        print("[SETTINGS]: Đã lưu toàn bộ cấu hình thành công!")
     end
 end
 
-_G.HubLogic.LoadAllConfig = function(elements)
-    if not readfile or not isfile or not isfile("HubAllConfig.json") then 
-        warn("[CONFIG LỖI]: Không tìm thấy file lưu cấu hình HubAllConfig.json")
+-- Hàm tải toàn bộ cấu hình hệ thống
+_G.HubLogic.LoadAllConfig = function(uiElements)
+    if not readfile or not isfile or not isfile("TargetFlyHubConfig.json") then 
+        warn("[SETTINGS]: Không tìm thấy file cấu hình 'TargetFlyHubConfig.json'")
         return 
     end
+
+    local success, content = pcall(function() return readfile("TargetFlyHubConfig.json") end)
+    if not success or not content then return end
+
+    local parseSuccess, parsed = pcall(function() return HttpService:JSONDecode(content) end)
+    if not parseSuccess or not parsed then return end
+
+    local w = _G.HubState.Widgets or {}
+
+    -- 1. Khôi phục biến State
+    _G.HubState._G_speedValue = parsed.speed or _G.HubState._G_speedValue
+    _G.HubState._G_sidesValue = parsed.sides or _G.HubState._G_sidesValue
+    _G.HubState._G_distanceValue = parsed.dist or _G.HubState._G_distanceValue
+    _G.HubState._G_heightValue = parsed.height or _G.HubState._G_heightValue
+    _G.HubState._G_flySpeedValue = parsed.fSpeed or _G.HubState._G_flySpeedValue
+    _G.HubState._G_predCoeffValue = parsed.pred or _G.HubState._G_predCoeffValue
+    _G.HubState.currentHeightModeStr = parsed.hModeStr or _G.HubState.currentHeightModeStr
+    _G.HubState.currentDirModeStr = parsed.dModeStr or _G.HubState.currentDirModeStr
+    _G.HubState.currentNetModeStr = parsed.nModeStr or _G.HubState.currentNetModeStr
+    _G.HubState.currentCombatModeStr = parsed.cModeStr or _G.HubState.currentCombatModeStr
     
-    local success, configData = pcall(function()
-        return HttpService:JSONDecode(readfile("HubAllConfig.json"))
-    end)
-    
-    if not success or not configData then return end
-    
-    elements = elements or {}
-    
-    if configData.isAutoTpGuiVisible ~= nil then
-        _G.HubState.isAutoTpGuiVisible = configData.isAutoTpGuiVisible
-        if _G.HubLogic.ToggleAutoTpGui then _G.HubLogic.ToggleAutoTpGui(configData.isAutoTpGuiVisible) end
-        if elements.Toggle_AutoTp and elements.Toggle_AutoTp.Set then elements.Toggle_AutoTp:Set(configData.isAutoTpGuiVisible) end
+    _G.HubState.studOffset = parsed.stud or _G.HubState.studOffset
+    _G.HubState.attachDuration = parsed.attachDuration or _G.HubState.attachDuration
+    _G.HubState.mode1Name = parsed.m1 or _G.HubState.mode1Name
+    _G.HubState.mode2Name = parsed.m2 or _G.HubState.mode2Name
+
+    _G.HubState.killAll_Delay = parsed.killAllDelay or _G.HubState.killAll_Delay
+    _G.HubState.killAll_FirstDeadCount = parsed.killAllFirstDead or _G.HubState.killAll_FirstDeadCount
+    _G.HubState.killAll_LowHealthCount = parsed.killAllLowHealth or _G.HubState.killAll_LowHealthCount
+    _G.HubState.killAll_TeleportDistance = parsed.killAllDist or _G.HubState.killAll_TeleportDistance
+    _G.HubState.killAll_DirectionMode = parsed.killAllDir or _G.HubState.killAll_DirectionMode
+    _G.HubState.killAll_VirtualOffset = parsed.killAllVirtualOffset or _G.HubState.killAll_VirtualOffset
+    _G.HubState.killAll_FlySpeed = parsed.killAllFlySpeed or _G.HubState.killAll_FlySpeed
+    _G.HubState.killAll_MoveMode = parsed.killAllMoveMode or _G.HubState.killAll_MoveMode
+
+    _G.HubState.flingTime = parsed.flingTime or _G.HubState.flingTime
+    _G.HubState.flingPower = parsed.flingPower or _G.HubState.flingPower
+    _G.HubState.flingVelocity = parsed.flingVelocity or _G.HubState.flingVelocity
+
+    _G.HubState.espPlayerEnabled = parsed.espPlayerEnabled
+    _G.HubState.espPlayerNameTag = parsed.espPlayerNameTag
+    _G.HubState.espPlayerGlow = parsed.espPlayerGlow
+    _G.HubState.espPlayerDistance = parsed.espPlayerDistance
+    _G.HubState.espPlayerTeamCheck = parsed.espPlayerTeamCheck
+    _G.HubState.espItemsEnabled = parsed.espItemsEnabled
+    _G.HubState.espItemSourcePath = parsed.espItemSourcePath
+
+    _G.HubState.isMiniGuiLocked = parsed.isMiniGuiLocked or false
+    _G.HubState.musicID = parsed.musicID or _G.HubState.musicID
+    _G.HubState.isMusicEnabled = parsed.isMusicEnabled or false
+
+    _G.HubState.isAvoidEnabled = parsed.isAvoidEnabled or false
+    _G.HubState.avoidRange = parsed.avoidRange or 20
+    _G.HubState.avoidMode = parsed.avoidMode or 1
+    _G.HubState.avoidTpDistance = parsed.avoidTpDistance or 5
+
+    -- BỔ SUNG: Load trạng thái các chức năng từ "Others"
+    _G.HubState.isFloatGuiVisible = parsed.isFloatGuiVisible or false
+    _G.HubState.isAutoTpGuiVisible = parsed.isAutoTpGuiVisible or false
+    _G.HubState.isPunchBypassEnabled = parsed.isPunchBypassEnabled or false
+
+    if _G.HubLogic.SetFloatGuiVisible then _G.HubLogic.SetFloatGuiVisible(_G.HubState.isFloatGuiVisible) end
+    if _G.HubLogic.SetAutoTpGuiVisible then _G.HubLogic.SetAutoTpGuiVisible(_G.HubState.isAutoTpGuiVisible) end
+    if _G.HubLogic.SetPunchBypassState then _G.HubLogic.SetPunchBypassState(_G.HubState.isPunchBypassEnabled) end
+
+    -- 2. Khôi phục trạng thái Toggle Mini Widgets
+    if w.classic then w.classic.Visible = parsed.tC_Vis or false end
+    if w.near then w.near.Visible = parsed.tN_Vis or false end
+    if w.orange then w.orange.Visible = parsed.tO_Vis or false end
+    if w.purple then w.purple.Visible = parsed.tP_Vis or false end
+    if w.killAll then w.killAll.Visible = parsed.killAllMiniVis or false end
+    if w.void then w.void.Visible = parsed.mV or false end
+    if w.kb then w.kb.Visible = parsed.mKB or false end
+    if w.fling then w.fling.Visible = parsed.flingMiniVis or false end
+
+    -- 3. Đồng bộ lại trạng thái UI Rayfield nếu có giao diện truyền vào
+    if uiElements then
+        pcall(function()
+            if uiElements.Toggle_ClassicTracker then uiElements.Toggle_ClassicTracker:Set(parsed.tC_Vis or false) end
+            if uiElements.Toggle_NearTracker then uiElements.Toggle_NearTracker:Set(parsed.tN_Vis or false) end
+            if uiElements.Toggle_OrangeFly then uiElements.Toggle_OrangeFly:Set(parsed.tO_Vis or false) end
+            if uiElements.Toggle_PurpleFly then uiElements.Toggle_PurpleFly:Set(parsed.tP_Vis or false) end
+            if uiElements.Toggle_MiniVoid then uiElements.Toggle_MiniVoid:Set(parsed.mV or true) end
+            if uiElements.Toggle_MiniKB then uiElements.Toggle_MiniKB:Set(parsed.mKB or true) end
+            if uiElements.Toggle_KillAllMini then uiElements.Toggle_KillAllMini:Set(parsed.killAllMiniVis or false) end
+            if uiElements.Toggle_FlingMini then uiElements.Toggle_FlingMini:Set(parsed.flingMiniVis or false) end
+            if uiElements.Toggle_Avoid then uiElements.Toggle_Avoid:Set(_G.HubState.isAvoidEnabled) end
+            if uiElements.Toggle_EspPlayer then uiElements.Toggle_EspPlayer:Set(_G.HubState.espPlayerEnabled or false) end
+            if uiElements.Toggle_LockedMiniGui then uiElements.Toggle_LockedMiniGui:Set(_G.HubState.isMiniGuiLocked) end
+            
+            if uiElements.Toggle_FloatGui then uiElements.Toggle_FloatGui:Set(_G.HubState.isFloatGuiVisible) end
+            if uiElements.Toggle_AutoTpGui then uiElements.Toggle_AutoTpGui:Set(_G.HubState.isAutoTpGuiVisible) end
+            if uiElements.Toggle_PunchBypass then uiElements.Toggle_PunchBypass:Set(_G.HubState.isPunchBypassEnabled) end
+        end)
     end
 
-    if configData.isFloatGuiVisible ~= nil then
-        _G.HubState.isFloatGuiVisible = configData.isFloatGuiVisible
-        if _G.HubLogic.ToggleFloatGui then _G.HubLogic.ToggleFloatGui(configData.isFloatGuiVisible) end
-        if elements.Toggle_Float and elements.Toggle_Float.Set then elements.Toggle_Float:Set(configData.isFloatGuiVisible) end
+    -- Khôi phục vị trí Mini GUI
+    if parsed.widgetPositions then
+        local wp = parsed.widgetPositions
+        if wp.classic and w.classic then w.classic.Position = UDim2.new(wp.classic[1], wp.classic[2], wp.classic[3], wp.classic[4]) end
+        if wp.near and w.near then w.near.Position = UDim2.new(wp.near[1], wp.near[2], wp.near[3], wp.near[4]) end
+        if wp.orange and w.orange then w.orange.Position = UDim2.new(wp.orange[1], wp.orange[2], wp.orange[3], wp.orange[4]) end
+        if wp.purple and w.purple then w.purple.Position = UDim2.new(wp.purple[1], wp.purple[2], wp.purple[3], wp.purple[4]) end
+        if wp.killAll and w.killAll then w.killAll.Position = UDim2.new(wp.killAll[1], wp.killAll[2], wp.killAll[3], wp.killAll[4]) end
+        if wp.void and w.void then w.void.Position = UDim2.new(wp.void[1], wp.void[2], wp.void[3], wp.void[4]) end
+        if wp.kb and w.kb then w.kb.Position = UDim2.new(wp.kb[1], wp.kb[2], wp.kb[3], wp.kb[4]) end
+        if wp.fling and w.fling then w.fling.Position = UDim2.new(wp.fling[1], wp.fling[2], wp.fling[3], wp.fling[4]) end
     end
 
-    if configData.BypassM1NoCD ~= nil then
-        _G.BypassM1NoCD = configData.BypassM1NoCD
-        if _G.HubLogic.TogglePunchBypass then _G.HubLogic.TogglePunchBypass(configData.BypassM1NoCD) end
-        if elements.Toggle_Punch and elements.Toggle_Punch.Set then elements.Toggle_Punch:Set(configData.BypassM1NoCD) end
-    end
-
-    if configData.isAvoidEnabled ~= nil then
-        _G.HubState.isAvoidEnabled = configData.isAvoidEnabled
-        if _G.HubLogic.ToggleAvoid then _G.HubLogic.ToggleAvoid(configData.isAvoidEnabled) end
-        if elements.Toggle_Avoid and elements.Toggle_Avoid.Set then elements.Toggle_Avoid:Set(configData.isAvoidEnabled) end
-    end
-
-    print("[SUCCESS]: Đã nạp thành công toàn bộ cấu hình GUI & Others!")
+    print("[SETTINGS]: Đã tải và đồng bộ toàn bộ cài đặt thành công!")
 end
