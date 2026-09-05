@@ -87,7 +87,7 @@ _G.HubLogic.SaveAllConfig = function()
         -- Target List Tab
         pinnedList = savedPinnedNames,
 
-        -- ESP Tab
+        -- ESP Tab (Bổ sung Save/Load toàn bộ cài đặt ESP Player & Item)
         espPlayerEnabled = _G.HubState.espPlayerEnabled,
         espPlayerNameTag = _G.HubState.espPlayerNameTag,
         espPlayerGlow = _G.HubState.espPlayerGlow,
@@ -98,7 +98,7 @@ _G.HubLogic.SaveAllConfig = function()
         espItemsGlow = _G.HubState.espItemsGlow,
         espItemsName = _G.HubState.espItemsName,
 
-        -- Misc Tab & Avoid
+        -- Misc Tab (Bổ sung Bổ sung 1: Save/Load các biến thiếu)
         isMiniGuiLocked = _G.HubState.isMiniGuiLocked,
         musicID = _G.HubState.musicID,
         isMusicEnabled = _G.HubState.isMusicEnabled,
@@ -109,11 +109,6 @@ _G.HubLogic.SaveAllConfig = function()
         avoidList = savedAvoidNames,
         isKillAllExceptionEnabled = _G.HubState.isKillAllExceptionEnabled,
         killAllExceptionsList = savedExceptionNames,
-
-        -- BỔ SUNG: Save các chức năng từ "Others"
-        isFloatGuiVisible = _G.HubState.isFloatGuiVisible,
-        isAutoTpGuiVisible = _G.HubState.isAutoTpGuiVisible,
-        isPunchBypassEnabled = _G.HubState.isPunchBypassEnabled,
 
         -- Lưu vị trí (Position) của toàn bộ các Mini GUI
         widgetPositions = {
@@ -128,127 +123,150 @@ _G.HubLogic.SaveAllConfig = function()
         }
     }
 
-    local success, encoded = pcall(function() return HttpService:JSONEncode(config) end)
-    if success and writefile then
-        pcall(function() writefile("TargetFlyHubConfig.json", encoded) end)
-        print("[SETTINGS]: Đã lưu toàn bộ cấu hình thành công!")
+    if writefile then
+        pcall(function() 
+            writefile(_G.HubState.fullSaveFileName or "FullGui_Save.json", HttpService:JSONEncode(config)) 
+        end)
     end
 end
 
--- Hàm tải toàn bộ cấu hình hệ thống
-_G.HubLogic.LoadAllConfig = function(uiElements)
-    if not readfile or not isfile or not isfile("TargetFlyHubConfig.json") then 
-        warn("[SETTINGS]: Không tìm thấy file cấu hình 'TargetFlyHubConfig.json'")
-        return 
-    end
-
-    local success, content = pcall(function() return readfile("TargetFlyHubConfig.json") end)
-    if not success or not content then return end
-
-    local parseSuccess, parsed = pcall(function() return HttpService:JSONDecode(content) end)
-    if not parseSuccess or not parsed then return end
-
-    local w = _G.HubState.Widgets or {}
-
-    -- 1. Khôi phục biến State
-    _G.HubState._G_speedValue = parsed.speed or _G.HubState._G_speedValue
-    _G.HubState._G_sidesValue = parsed.sides or _G.HubState._G_sidesValue
-    _G.HubState._G_distanceValue = parsed.dist or _G.HubState._G_distanceValue
-    _G.HubState._G_heightValue = parsed.height or _G.HubState._G_heightValue
-    _G.HubState._G_flySpeedValue = parsed.fSpeed or _G.HubState._G_flySpeedValue
-    _G.HubState._G_predCoeffValue = parsed.pred or _G.HubState._G_predCoeffValue
-    _G.HubState.currentHeightModeStr = parsed.hModeStr or _G.HubState.currentHeightModeStr
-    _G.HubState.currentDirModeStr = parsed.dModeStr or _G.HubState.currentDirModeStr
-    _G.HubState.currentNetModeStr = parsed.nModeStr or _G.HubState.currentNetModeStr
-    _G.HubState.currentCombatModeStr = parsed.cModeStr or _G.HubState.currentCombatModeStr
+-- Hàm khôi phục toàn bộ cấu hình đã lưu (Hoàn chỉnh bổ sung 1)
+_G.HubLogic.LoadAllConfig = function(UIElements)
+    if not (readfile and isfile) then return end
     
-    _G.HubState.studOffset = parsed.stud or _G.HubState.studOffset
-    _G.HubState.attachDuration = parsed.attachDuration or _G.HubState.attachDuration
-    _G.HubState.mode1Name = parsed.m1 or _G.HubState.mode1Name
-    _G.HubState.mode2Name = parsed.m2 or _G.HubState.mode2Name
+    local fileName = _G.HubState.fullSaveFileName or "FullGui_Save.json"
+    local isExist = false
+    pcall(function() isExist = isfile(fileName) end)
+    
+    if isExist then
+        local success, parsed = pcall(function() return HttpService:JSONDecode(readfile(fileName)) end)
+        if success and type(parsed) == "table" then
+            UIElements = UIElements or {}
 
-    _G.HubState.killAll_Delay = parsed.killAllDelay or _G.HubState.killAll_Delay
-    _G.HubState.killAll_FirstDeadCount = parsed.killAllFirstDead or _G.HubState.killAll_FirstDeadCount
-    _G.HubState.killAll_LowHealthCount = parsed.killAllLowHealth or _G.HubState.killAll_LowHealthCount
-    _G.HubState.killAll_TeleportDistance = parsed.killAllDist or _G.HubState.killAll_TeleportDistance
-    _G.HubState.killAll_DirectionMode = parsed.killAllDir or _G.HubState.killAll_DirectionMode
-    _G.HubState.killAll_VirtualOffset = parsed.killAllVirtualOffset or _G.HubState.killAll_VirtualOffset
-    _G.HubState.killAll_FlySpeed = parsed.killAllFlySpeed or _G.HubState.killAll_FlySpeed
-    _G.HubState.killAll_MoveMode = parsed.killAllMoveMode or _G.HubState.killAll_MoveMode
+            -- 1. Tab Combat
+            if UIElements.Input_Speed then UIElements.Input_Speed:Set(tostring(parsed.speed or 90)) end
+            if UIElements.Input_Sides then UIElements.Input_Sides:Set(tostring(parsed.sides or 0)) end 
+            if UIElements.Input_Dist then UIElements.Input_Dist:Set(tostring(parsed.dist or 4.5)) end
+            if UIElements.Input_Height then UIElements.Input_Height:Set(tostring(parsed.height or 4.5)) end
+            if UIElements.Input_Chase then UIElements.Input_Chase:Set(tostring(parsed.fSpeed or 250)) end
+            if UIElements.Input_Pred then UIElements.Input_Pred:Set(tostring(parsed.pred or 1)) end
+            if UIElements.Input_Vel then UIElements.Input_Vel:Set(tostring(parsed.vel or 2)) end
 
-    _G.HubState.flingTime = parsed.flingTime or _G.HubState.flingTime
-    _G.HubState.flingPower = parsed.flingPower or _G.HubState.flingPower
-    _G.HubState.flingVelocity = parsed.flingVelocity or _G.HubState.flingVelocity
+            if UIElements.Drop_HeightMode then UIElements.Drop_HeightMode:Set({parsed.hModeStr or "MODE: TRÊN TRỜI"}) end
+            if UIElements.Drop_DirMode then UIElements.Drop_DirMode:Set({parsed.dModeStr or "ORBIT (XOAY)"}) end
+            if UIElements.Drop_NetMode then UIElements.Drop_NetMode:Set({parsed.nModeStr or "NET: NORMAL"}) end
+            if UIElements.Drop_CombatMode then UIElements.Drop_CombatMode:Set({parsed.cModeStr or "MODE: OFF (TS/PRED)"}) end
 
-    _G.HubState.espPlayerEnabled = parsed.espPlayerEnabled
-    _G.HubState.espPlayerNameTag = parsed.espPlayerNameTag
-    _G.HubState.espPlayerGlow = parsed.espPlayerGlow
-    _G.HubState.espPlayerDistance = parsed.espPlayerDistance
-    _G.HubState.espPlayerTeamCheck = parsed.espPlayerTeamCheck
-    _G.HubState.espItemsEnabled = parsed.espItemsEnabled
-    _G.HubState.espItemSourcePath = parsed.espItemSourcePath
+            if UIElements.Toggle_ClassicTracker then UIElements.Toggle_ClassicTracker:Set(parsed.tC_Vis == nil and false or parsed.tC_Vis) end
+            if UIElements.Toggle_NearTracker then UIElements.Toggle_NearTracker:Set(parsed.tN_Vis == nil and false or parsed.tN_Vis) end
+            if UIElements.Toggle_OrangeFly then UIElements.Toggle_OrangeFly:Set(parsed.tO_Vis == nil and false or parsed.tO_Vis) end
+            if UIElements.Toggle_PurpleFly then UIElements.Toggle_PurpleFly:Set(parsed.tP_Vis == nil and false or parsed.tP_Vis) end
+            if UIElements.Toggle_Noclip then UIElements.Toggle_Noclip:Set(parsed.noclip == nil and false or parsed.noclip) end
+            if UIElements.Toggle_VisualServer then UIElements.Toggle_VisualServer:Set(parsed.visualServer == nil and false or parsed.visualServer) end
 
-    _G.HubState.isMiniGuiLocked = parsed.isMiniGuiLocked or false
-    _G.HubState.musicID = parsed.musicID or _G.HubState.musicID
-    _G.HubState.isMusicEnabled = parsed.isMusicEnabled or false
-
-    _G.HubState.isAvoidEnabled = parsed.isAvoidEnabled or false
-    _G.HubState.avoidRange = parsed.avoidRange or 20
-    _G.HubState.avoidMode = parsed.avoidMode or 1
-    _G.HubState.avoidTpDistance = parsed.avoidTpDistance or 5
-
-    -- BỔ SUNG: Load trạng thái các chức năng từ "Others"
-    _G.HubState.isFloatGuiVisible = parsed.isFloatGuiVisible or false
-    _G.HubState.isAutoTpGuiVisible = parsed.isAutoTpGuiVisible or false
-    _G.HubState.isPunchBypassEnabled = parsed.isPunchBypassEnabled or false
-
-    if _G.HubLogic.SetFloatGuiVisible then _G.HubLogic.SetFloatGuiVisible(_G.HubState.isFloatGuiVisible) end
-    if _G.HubLogic.SetAutoTpGuiVisible then _G.HubLogic.SetAutoTpGuiVisible(_G.HubState.isAutoTpGuiVisible) end
-    if _G.HubLogic.SetPunchBypassState then _G.HubLogic.SetPunchBypassState(_G.HubState.isPunchBypassEnabled) end
-
-    -- 2. Khôi phục trạng thái Toggle Mini Widgets
-    if w.classic then w.classic.Visible = parsed.tC_Vis or false end
-    if w.near then w.near.Visible = parsed.tN_Vis or false end
-    if w.orange then w.orange.Visible = parsed.tO_Vis or false end
-    if w.purple then w.purple.Visible = parsed.tP_Vis or false end
-    if w.killAll then w.killAll.Visible = parsed.killAllMiniVis or false end
-    if w.void then w.void.Visible = parsed.mV or false end
-    if w.kb then w.kb.Visible = parsed.mKB or false end
-    if w.fling then w.fling.Visible = parsed.flingMiniVis or false end
-
-    -- 3. Đồng bộ lại trạng thái UI Rayfield nếu có giao diện truyền vào
-    if uiElements then
-        pcall(function()
-            if uiElements.Toggle_ClassicTracker then uiElements.Toggle_ClassicTracker:Set(parsed.tC_Vis or false) end
-            if uiElements.Toggle_NearTracker then uiElements.Toggle_NearTracker:Set(parsed.tN_Vis or false) end
-            if uiElements.Toggle_OrangeFly then uiElements.Toggle_OrangeFly:Set(parsed.tO_Vis or false) end
-            if uiElements.Toggle_PurpleFly then uiElements.Toggle_PurpleFly:Set(parsed.tP_Vis or false) end
-            if uiElements.Toggle_MiniVoid then uiElements.Toggle_MiniVoid:Set(parsed.mV or true) end
-            if uiElements.Toggle_MiniKB then uiElements.Toggle_MiniKB:Set(parsed.mKB or true) end
-            if uiElements.Toggle_KillAllMini then uiElements.Toggle_KillAllMini:Set(parsed.killAllMiniVis or false) end
-            if uiElements.Toggle_FlingMini then uiElements.Toggle_FlingMini:Set(parsed.flingMiniVis or false) end
-            if uiElements.Toggle_Avoid then uiElements.Toggle_Avoid:Set(_G.HubState.isAvoidEnabled) end
-            if uiElements.Toggle_EspPlayer then uiElements.Toggle_EspPlayer:Set(_G.HubState.espPlayerEnabled or false) end
-            if uiElements.Toggle_LockedMiniGui then uiElements.Toggle_LockedMiniGui:Set(_G.HubState.isMiniGuiLocked) end
+            -- 2. Tab One Shot
+            if UIElements.InputStudsUI then UIElements.InputStudsUI:Set(tostring(parsed.stud or 0)) end
+            if UIElements.InputTimeUI then UIElements.InputTimeUI:Set(tostring(parsed.attachDuration or 0)) end
+            if UIElements.DropNgangUI then UIElements.DropNgangUI:Set({parsed.m1 or "Hủy"}) end
+            if UIElements.DropTrenUI then UIElements.DropTrenUI:Set({parsed.m2 or "Hủy"}) end
+            if UIElements.ToggleVoidUI then UIElements.ToggleVoidUI:Set(parsed.mV == nil and true or parsed.mV) end
+            if UIElements.ToggleKBUI then UIElements.ToggleKBUI:Set(parsed.mKB == nil and true or parsed.mKB) end
             
-            if uiElements.Toggle_FloatGui then uiElements.Toggle_FloatGui:Set(_G.HubState.isFloatGuiVisible) end
-            if uiElements.Toggle_AutoTpGui then uiElements.Toggle_AutoTpGui:Set(_G.HubState.isAutoTpGuiVisible) end
-            if uiElements.Toggle_PunchBypass then uiElements.Toggle_PunchBypass:Set(_G.HubState.isPunchBypassEnabled) end
-        end)
-    end
+            -- 3. Tab Kill All
+            _G.HubState.killAllActive = parsed.killAllActive == nil and false or parsed.killAllActive
+            _G.HubState.killAll_TeleportDistance = parsed.killAllDist or 1.5
+            _G.HubState.killAll_DirectionMode = parsed.killAllDir or "đằng sau"
+            _G.HubState.killAll_Delay = parsed.killAllDelay or 1
+            _G.HubState.killAll_FirstDeadCount = parsed.killAllFirstDead or 0
+            _G.HubState.killAll_LowHealthCount = parsed.killAllLowHealth or 0
+            _G.HubState.killAll_VirtualOffset = parsed.killAllVirtualOffset or 0
+            _G.HubState.killAll_FlySpeed = parsed.killAllFlySpeed or 300
+            _G.HubState.killAll_MoveMode = parsed.killAllMoveMode or "Teleport"
+            
+            if UIElements.Toggle_TouchFling then UIElements.Toggle_TouchFling:Set(parsed.touchFling == nil and false or parsed.touchFling) end
+            if UIElements.Toggle_AntiFling then UIElements.Toggle_AntiFling:Set(parsed.antiFling == nil and false or parsed.antiFling) end
+            if UIElements.Input_KillAllDelay then UIElements.Input_KillAllDelay:Set(tostring(parsed.killAllDelay or 1)) end
+            if UIElements.Input_KillAllFirstDead then UIElements.Input_KillAllFirstDead:Set(tostring(parsed.killAllFirstDead or 0)) end
+            if UIElements.Input_KillAllLowHealth then UIElements.Input_KillAllLowHealth:Set(tostring(parsed.killAllLowHealth or 0)) end
+            if UIElements.Input_KillAllDist then UIElements.Input_KillAllDist:Set(tostring(parsed.killAllDist or 1.5)) end
+            if UIElements.Drop_KillAllDir then UIElements.Drop_KillAllDir:Set({parsed.killAllDir or "đằng sau"}) end
+            if UIElements.Input_VirtualPos then UIElements.Input_VirtualPos:Set(tostring(parsed.killAllVirtualOffset or 0)) end
+            if UIElements.Input_KillAllFlySpeed then UIElements.Input_KillAllFlySpeed:Set(tostring(parsed.killAllFlySpeed or 300)) end
+            if UIElements.Drop_KillAllMoveMode then UIElements.Drop_KillAllMoveMode:Set({parsed.killAllMoveMode or "Teleport"}) end
 
-    -- Khôi phục vị trí Mini GUI
-    if parsed.widgetPositions then
-        local wp = parsed.widgetPositions
-        if wp.classic and w.classic then w.classic.Position = UDim2.new(wp.classic[1], wp.classic[2], wp.classic[3], wp.classic[4]) end
-        if wp.near and w.near then w.near.Position = UDim2.new(wp.near[1], wp.near[2], wp.near[3], wp.near[4]) end
-        if wp.orange and w.orange then w.orange.Position = UDim2.new(wp.orange[1], wp.orange[2], wp.orange[3], wp.orange[4]) end
-        if wp.purple and w.purple then w.purple.Position = UDim2.new(wp.purple[1], wp.purple[2], wp.purple[3], wp.purple[4]) end
-        if wp.killAll and w.killAll then w.killAll.Position = UDim2.new(wp.killAll[1], wp.killAll[2], wp.killAll[3], wp.killAll[4]) end
-        if wp.void and w.void then w.void.Position = UDim2.new(wp.void[1], wp.void[2], wp.void[3], wp.void[4]) end
-        if wp.kb and w.kb then w.kb.Position = UDim2.new(wp.kb[1], wp.kb[2], wp.kb[3], wp.kb[4]) end
-        if wp.fling and w.fling then w.fling.Position = UDim2.new(wp.fling[1], wp.fling[2], wp.fling[3], wp.fling[4]) end
-    end
+            -- Fling Load
+            _G.HubState.flingTime = parsed.flingTime or 1
+            _G.HubState.flingPower = parsed.flingPower or 1000000000
+            _G.HubState.flingVelocity = parsed.flingVelocity or 1000000000
+            if UIElements.Input_FlingTime then UIElements.Input_FlingTime:Set(tostring(parsed.flingTime or 1)) end
+            if UIElements.Input_FlingPower then UIElements.Input_FlingPower:Set(tostring(parsed.flingPower or 1000000000)) end
+            if UIElements.Input_FlingVel then UIElements.Input_FlingVel:Set(tostring(parsed.flingVelocity or 1000000000)) end
 
-    print("[SETTINGS]: Đã tải và đồng bộ toàn bộ cài đặt thành công!")
+            local w = _G.HubState.Widgets or {}
+            if w.killAll then w.killAll.Visible = parsed.killAllMiniVis == nil and false or parsed.killAllMiniVis end
+            if UIElements.Toggle_KillAllMiniVis and w.killAll then UIElements.Toggle_KillAllMiniVis:Set(w.killAll.Visible) end
+            if w.fling then w.fling.Visible = parsed.flingMiniVis == nil and false or parsed.flingMiniVis end
+            if UIElements.Toggle_FlingMiniVis and w.fling then UIElements.Toggle_FlingMiniVis:Set(w.fling.Visible) end
+            
+            -- 4. Tab Target List
+            if UIElements.PinnedDropdown and parsed.pinnedList then
+                UIElements.PinnedDropdown:Set(parsed.pinnedList)
+            end
+
+            -- 5. Tab ESP Load
+            if UIElements.Toggle_EspPlayer then UIElements.Toggle_EspPlayer:Set(parsed.espPlayerEnabled == nil and false or parsed.espPlayerEnabled) end
+            if UIElements.Toggle_EspPlayerNameTag then UIElements.Toggle_EspPlayerNameTag:Set(parsed.espPlayerNameTag == nil and false or parsed.espPlayerNameTag) end
+            if UIElements.Toggle_EspPlayerGlow then UIElements.Toggle_EspPlayerGlow:Set(parsed.espPlayerGlow == nil and false or parsed.espPlayerGlow) end
+            if UIElements.Toggle_EspPlayerDistance then UIElements.Toggle_EspPlayerDistance:Set(parsed.espPlayerDistance == nil and false or parsed.espPlayerDistance) end
+            if UIElements.Toggle_EspPlayerTeamCheck then UIElements.Toggle_EspPlayerTeamCheck:Set(parsed.espPlayerTeamCheck == nil and false or parsed.espPlayerTeamCheck) end
+
+            if UIElements.Toggle_EspItem then UIElements.Toggle_EspItem:Set(parsed.espItemsEnabled == nil and false or parsed.espItemsEnabled) end
+            if UIElements.Toggle_EspItemGlow then UIElements.Toggle_EspItemGlow:Set(parsed.espItemsGlow == nil and false or parsed.espItemsGlow) end
+            if UIElements.Toggle_EspItemName then UIElements.Toggle_EspItemName:Set(parsed.espItemsName == nil and false or parsed.espItemsName) end
+            if UIElements.Input_EspItemSource and parsed.espItemSourcePath then UIElements.Input_EspItemSource:Set(parsed.espItemSourcePath) end
+
+            -- 6. Tab Misc Load (Bổ sung 1)
+            _G.HubState.isMiniGuiLocked = parsed.isMiniGuiLocked == nil and false or parsed.isMiniGuiLocked
+            if UIElements.Toggle_LockedMiniGui then UIElements.Toggle_LockedMiniGui:Set(_G.HubState.isMiniGuiLocked) end
+
+            if UIElements.Input_MusicID and parsed.musicID then UIElements.Input_MusicID:Set(parsed.musicID) end
+            if UIElements.Toggle_Music then UIElements.Toggle_Music:Set(parsed.isMusicEnabled == nil and false or parsed.isMusicEnabled) end
+
+            _G.HubState.avoidRange = parsed.avoidRange or 20
+            _G.HubState.avoidMode = parsed.avoidMode or 1
+            _G.HubState.avoidTpDistance = parsed.avoidTpDistance or 5
+            if UIElements.Toggle_Avoid then UIElements.Toggle_Avoid:Set(parsed.isAvoidEnabled == nil and false or parsed.isAvoidEnabled) end
+            if UIElements.Input_AvoidRange then UIElements.Input_AvoidRange:Set(tostring(parsed.avoidRange or 20)) end
+            if UIElements.Drop_AvoidMode then UIElements.Drop_AvoidMode:Set({parsed.avoidMode == 2 and "Random" or "Cổ điển"}) end
+            if UIElements.Input_AvoidTpDist then UIElements.Input_AvoidTpDist:Set(tostring(parsed.avoidTpDistance or 5)) end
+            if UIElements.Drop_AvoidList and parsed.avoidList then UIElements.Drop_AvoidList:Set(parsed.avoidList) end
+
+            _G.HubState.isKillAllExceptionEnabled = parsed.isKillAllExceptionEnabled == nil and false or parsed.isKillAllExceptionEnabled
+            if UIElements.Toggle_Exception then UIElements.Toggle_Exception:Set(_G.HubState.isKillAllExceptionEnabled) end
+            if UIElements.Drop_KillAllExceptions and parsed.killAllExceptionsList then UIElements.Drop_KillAllExceptions:Set(parsed.killAllExceptionsList) end
+
+            -- Cập nhật trạng thái logic ESP Item sau khi load
+            if _G.HubLogic.SetEspItemsActive then
+                _G.HubLogic.SetEspItemsActive(parsed.espItemsEnabled == nil and false or parsed.espItemsEnabled)
+            end
+
+            -- Khôi phục vị trí Mini GUI
+            if parsed.widgetPositions then
+                local wp = parsed.widgetPositions
+                if wp.classic and w.classic then w.classic.Position = UDim2.new(wp.classic[1], wp.classic[2], wp.classic[3], wp.classic[4]) end
+                if wp.near and w.near then w.near.Position = UDim2.new(wp.near[1], wp.near[2], wp.near[3], wp.near[4]) end
+                if wp.orange and w.orange then w.orange.Position = UDim2.new(wp.orange[1], wp.orange[2], wp.orange[3], wp.orange[4]) end
+                if wp.purple and w.purple then w.purple.Position = UDim2.new(wp.purple[1], wp.purple[2], wp.purple[3], wp.purple[4]) end
+                if wp.killAll and w.killAll then w.killAll.Position = UDim2.new(wp.killAll[1], wp.killAll[2], wp.killAll[3], wp.killAll[4]) end
+                if wp.void and w.void then w.void.Position = UDim2.new(wp.void[1], wp.void[2], wp.void[3], wp.void[4]) end
+                if wp.kb and w.kb then w.kb.Position = UDim2.new(wp.kb[1], wp.kb[2], wp.kb[3], wp.kb[4]) end
+                if wp.fling and w.fling then w.fling.Position = UDim2.new(wp.fling[1], wp.fling[2], wp.fling[3], wp.fling[4]) end
+            end
+
+            _G.HubState.isAttached = false
+            _G.HubState.targetModeIndex = 3 
+            if _G.HubLogic.StopFlying then _G.HubLogic.StopFlying() end
+            if _G.HubLogic.UpdateAttachment then _G.HubLogic.UpdateAttachment() end
+        end
+    end
 end
