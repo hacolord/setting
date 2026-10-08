@@ -1,5 +1,5 @@
 -- ======================================================================
--- PHẦN 6: LOGIC SETTINGS VÀ SAVE/LOAD (NHÁNH 2)
+-- PHẦN 6: LOGIC SETTINGS VÀ SAVE/LOAD (NHÁNH 2) - FIXED BASE64 & JSON
 -- ======================================================================
 
 local HttpService = game:GetService("HttpService")
@@ -7,9 +7,11 @@ local HttpService = game:GetService("HttpService")
 _G.HubState = _G.HubState or {}
 _G.HubLogic = _G.HubLogic or {}
 
--- HÀM MÃ HÓA B32 / BASE64 ĐỂ TẠO ID NẮM GỌN CHUỖI JSON
+-- HÀM MÃ HÓA / GIẢI MÃ BASE64 CHUẨN XỬ LÝ AN TOÀN CHUỖI JSON
 local b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+
 local function base64Encode(data)
+    if not data or data == "" then return "" end
     return ((data:gsub('.', function(x) 
         local r,b='',x:byte()
         for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
@@ -23,6 +25,7 @@ local function base64Encode(data)
 end
 
 local function base64Decode(data)
+    if not data or data == "" then return "" end
     data = string.gsub(data, '[^'..b64chars..'=]', '')
     return (data:gsub('.', function(x)
         if (x == '=') then return '' end
@@ -37,14 +40,16 @@ local function base64Decode(data)
     end))
 end
 
--- Hàm lấy bảng Cấu Hình Hiện Tại
+-- Hàm lấy bảng Cấu Hình Hiện Tại (Đã lọc sạch các giá trị nil)
 _G.HubLogic.GetConfigTable = function()
     local w = _G.HubState.Widgets or {}
     
     local savedPinnedNames = {}
-    if _G.HubLogic.HasPinnedPlayers and _G.HubLogic.HasPinnedPlayers() then
+    if _G.HubLogic.HasPinnedPlayers and _G.HubLogic.HasPinnedPlayers() and _G.HubState.pinnedOrder then
         for _, p in ipairs(_G.HubState.pinnedOrder) do 
-            table.insert(savedPinnedNames, p.DisplayName .. " (" .. p.Name .. ")") 
+            if p and p.Parent then
+                table.insert(savedPinnedNames, tostring(p.DisplayName) .. " (" .. tostring(p.Name) .. ")") 
+            end
         end
     end
 
@@ -52,7 +57,7 @@ _G.HubLogic.GetConfigTable = function()
     if _G.HubState.avoidTargets then
         for p, active in pairs(_G.HubState.avoidTargets) do
             if active and p and p.Parent then
-                table.insert(savedAvoidNames, p.DisplayName .. " (" .. p.Name .. ")")
+                table.insert(savedAvoidNames, tostring(p.DisplayName) .. " (" .. tostring(p.Name) .. ")")
             end
         end
     end
@@ -61,86 +66,86 @@ _G.HubLogic.GetConfigTable = function()
     if _G.HubState.killAllExceptions then
         for p, active in pairs(_G.HubState.killAllExceptions) do
             if active and p and p.Parent then
-                table.insert(savedExceptionNames, p.DisplayName .. " (" .. p.Name .. ")")
+                table.insert(savedExceptionNames, tostring(p.DisplayName) .. " (" .. tostring(p.Name) .. ")")
             end
         end
     end
     
     return {
         -- Combat Tab
-        speed = _G.HubState._G_speedValue,
-        sides = _G.HubState._G_sidesValue, 
-        dist = _G.HubState._G_distanceValue,
-        height = _G.HubState._G_heightValue,
-        fSpeed = _G.HubState._G_flySpeedValue,
-        pred = _G.HubState._G_predCoeffValue,
-        vel = _G.HubState._G_velCheckValue,
-        hModeStr = _G.HubState.currentHeightModeStr, 
-        dModeStr = _G.HubState.currentDirModeStr,
-        nModeStr = _G.HubState.currentNetModeStr, 
-        cModeStr = _G.HubState.currentCombatModeStr,
+        speed = _G.HubState._G_speedValue or 90,
+        sides = _G.HubState._G_sidesValue or 0, 
+        dist = _G.HubState._G_distanceValue or 4.5,
+        height = _G.HubState._G_heightValue or 4.5,
+        fSpeed = _G.HubState._G_flySpeedValue or 250,
+        pred = _G.HubState._G_predCoeffValue or 1,
+        vel = _G.HubState._G_velCheckValue or 2,
+        hModeStr = _G.HubState.currentHeightModeStr or "MODE: TRÊN TRỜI", 
+        dModeStr = _G.HubState.currentDirModeStr or "ORBIT (XOAY)",
+        nModeStr = _G.HubState.currentNetModeStr or "NET: NORMAL", 
+        cModeStr = _G.HubState.currentCombatModeStr or "MODE: OFF (TS/PRED)",
         tC_Vis = w.classic and w.classic.Visible or false, 
         tN_Vis = w.near and w.near.Visible or false,
         tO_Vis = w.orange and w.orange.Visible or false, 
         tP_Vis = w.purple and w.purple.Visible or false,
-        noclip = _G.HubState.isNoclipEnabled,
-        visualServer = _G.HubState.isVisualServerEnabled,
+        noclip = _G.HubState.isNoclipEnabled or false,
+        visualServer = _G.HubState.isVisualServerEnabled or false,
         
         -- One Shot Tab
-        stud = _G.HubState.studOffset,
-        attachDuration = _G.HubState.attachDuration,
-        m1 = _G.HubState.mode1Name, 
-        m2 = _G.HubState.mode2Name,
-        mV = _G.HubState.isMiniVoidVisible, 
-        mKB = _G.HubState.isMiniKBVisible,
+        stud = _G.HubState.studOffset or 0,
+        attachDuration = _G.HubState.attachDuration or 0,
+        m1 = _G.HubState.mode1Name or "Hủy", 
+        m2 = _G.HubState.mode2Name or "Hủy",
+        mV = _G.HubState.isMiniVoidVisible or false, 
+        mKB = _G.HubState.isMiniKBVisible or false,
 
         -- Kill All Tab
-        killAllActive = _G.HubState.killAllActive,
+        killAllActive = _G.HubState.killAllActive or false,
         killAllMiniVis = w.killAll and w.killAll.Visible or false,
-        touchFling = _G.HubState.isTouchFlingEnabled,
-        antiFling = _G.HubState.isAntiFlingEnabled,
-        killAllDelay = _G.HubState.killAll_Delay,
-        killAllFirstDead = _G.HubState.killAll_FirstDeadCount,
-        killAllLowHealth = _G.HubState.killAll_LowHealthCount,
-        killAllDist = _G.HubState.killAll_TeleportDistance,
-        killAllDir = _G.HubState.killAll_DirectionMode,
-        killAllVirtualOffset = _G.HubState.killAll_VirtualOffset,
-        killAllFlySpeed = _G.HubState.killAll_FlySpeed,
-        killAllMoveMode = _G.HubState.killAll_MoveMode,
+        touchFling = _G.HubState.isTouchFlingEnabled or false,
+        antiFling = _G.HubState.isAntiFlingEnabled or false,
+        killAllDelay = _G.HubState.killAll_Delay or 1,
+        killAllFirstDead = _G.HubState.killAll_FirstDeadCount or 0,
+        killAllLowHealth = _G.HubState.killAll_LowHealthCount or 0,
+        killAllDist = _G.HubState.killAll_TeleportDistance or 1.5,
+        killAllDir = _G.HubState.killAll_DirectionMode or "đằng sau",
+        killAllVirtualOffset = _G.HubState.killAll_VirtualOffset or 0,
+        killAllFlySpeed = _G.HubState.killAll_FlySpeed or 300,
+        killAllMoveMode = _G.HubState.killAll_MoveMode or "Teleport",
 
         -- Fling Config
-        flingTime = _G.HubState.flingTime,
-        flingPower = _G.HubState.flingPower,
-        flingVelocity = _G.HubState.flingVelocity,
+        flingTime = _G.HubState.flingTime or 1,
+        flingPower = _G.HubState.flingPower or 1000000000,
+        flingVelocity = _G.HubState.flingVelocity or 1000000000,
         flingMiniVis = w.fling and w.fling.Visible or false,
 
         -- Target List Tab
         pinnedList = savedPinnedNames,
 
-        -- ESP Tab (Bổ sung Save/Load toàn bộ cài đặt ESP Player & Item)
-        espPlayerEnabled = _G.HubState.espPlayerEnabled,
-        espPlayerNameTag = _G.HubState.espPlayerNameTag,
-        espPlayerGlow = _G.HubState.espPlayerGlow,
-        espPlayerDistance = _G.HubState.espPlayerDistance,
-        espPlayerTeamCheck = _G.HubState.espPlayerTeamCheck,
-        espItemsEnabled = _G.HubState.espItemsEnabled,
-        espItemSourcePath = _G.HubState.espItemSourcePath,
-        espItemsGlow = _G.HubState.espItemsGlow,
-        espItemsName = _G.HubState.espItemsName,
+        -- ESP Tab
+        espPlayerEnabled = _G.HubState.espPlayerEnabled or false,
+        espPlayerNameTag = _G.HubState.espPlayerNameTag or false,
+        espPlayerGlow = _G.HubState.espPlayerGlow or false,
+        espPlayerDistance = _G.HubState.espPlayerDistance or false,
+        espPlayerTeamCheck = _G.HubState.espPlayerTeamCheck or false,
+        espItemsEnabled = _G.HubState.espItemsEnabled or false,
+        espItemSourcePath = _G.HubState.espItemSourcePath or "",
+        espItemsGlow = _G.HubState.espItemsGlow or false,
+        espItemsName = _G.HubState.espItemsName or false,
 
-        -- Misc Tab (Bổ sung Bổ sung 1: Save/Load các biến thiếu)
-        isMiniGuiLocked = _G.HubState.isMiniGuiLocked,
-        musicID = _G.HubState.musicID,
-        isMusicEnabled = _G.HubState.isMusicEnabled,
-        isAvoidEnabled = _G.HubState.isAvoidEnabled,
-        avoidRange = _G.HubState.avoidRange,
-        avoidMode = _G.HubState.avoidMode,
-        avoidTpDistance = _G.HubState.avoidTpDistance,
+        -- Misc Tab
+        isMiniGuiLocked = _G.HubState.isMiniGuiLocked or false,
+        musicID = _G.HubState.musicID or "",
+        isMusicEnabled = _G.HubState.isMusicEnabled or false,
+        isAvoidEnabled = _G.HubState.isAvoidEnabled or false,
+        avoidRange = _G.HubState.avoidRange or 20,
+        avoidMode = _G.HubState.avoidMode or 1,
+        avoidTpDistance = _G.HubState.avoidTpDistance or 5,
         avoidList = savedAvoidNames,
-        isKillAllExceptionEnabled = _G.HubState.isKillAllExceptionEnabled,
+        isKillAllExceptionEnabled = _G.HubState.isKillAllExceptionEnabled or false,
         killAllExceptionsList = savedExceptionNames,
 
-        -- Lưu vị trí (Position) của toàn bộ các Mini GUI
+        -- Vị trí (Position) của Mini GUI
         widgetPositions = {
             classic = w.classic and {w.classic.Position.X.Scale, w.classic.Position.X.Offset, w.classic.Position.Y.Scale, w.classic.Position.Y.Offset},
             near = w.near and {w.near.Position.X.Scale, w.near.Position.X.Offset, w.near.Position.Y.Scale, w.near.Position.Y.Offset},
@@ -167,8 +172,12 @@ end
 -- Hàm lấy ID setting để chia sẻ
 _G.HubLogic.GetConfigID = function()
     local config = _G.HubLogic.GetConfigTable()
-    local jsonStr = HttpService:JSONEncode(config)
-    return base64Encode(jsonStr)
+    local success, jsonStr = pcall(function() return HttpService:JSONEncode(config) end)
+    if success and jsonStr then
+        return base64Encode(jsonStr)
+    end
+    warn("[SETTING ERROR]: Không thể mã hóa cài đặt sang JSON!")
+    return ""
 end
 
 -- Hàm áp dụng dữ liệu bảng cấu hình lên GUI
@@ -278,7 +287,6 @@ _G.HubLogic.ApplyConfigData = function(parsed, UIElements)
     if UIElements.Toggle_Exception then UIElements.Toggle_Exception:Set(_G.HubState.isKillAllExceptionEnabled) end
     if UIElements.Drop_KillAllExceptions and parsed.killAllExceptionsList then UIElements.Drop_KillAllExceptions:Set(parsed.killAllExceptionsList) end
 
-    -- Cập nhật trạng thái logic ESP Item sau khi load
     if _G.HubLogic.SetEspItemsActive then
         _G.HubLogic.SetEspItemsActive(parsed.espItemsEnabled == nil and false or parsed.espItemsEnabled)
     end
@@ -300,6 +308,8 @@ _G.HubLogic.ApplyConfigData = function(parsed, UIElements)
     _G.HubState.targetModeIndex = 3 
     if _G.HubLogic.StopFlying then _G.HubLogic.StopFlying() end
     if _G.HubLogic.UpdateAttachment then _G.HubLogic.UpdateAttachment() end
+    
+    print("[SETTING SUCCESS]: Đã load cấu hình ID thành công!")
 end
 
 -- Hàm khôi phục toàn bộ cấu hình từ file lưu cục bộ
@@ -311,7 +321,7 @@ _G.HubLogic.LoadAllConfig = function(UIElements)
     pcall(function() isExist = isfile(fileName) end)
     
     if isExist then
-        local success, parsed = pcall(function() return HttpService:JSONDecode(readfile(fileName)) end)
+        local success, parsed = pcall(function() return HttpService:JSONEncode(readfile(fileName)) end)
         if success and type(parsed) == "table" then
             _G.HubLogic.ApplyConfigData(parsed, UIElements)
         end
@@ -320,11 +330,17 @@ end
 
 -- Hàm khôi phục cấu hình từ chuỗi mã ID setting
 _G.HubLogic.LoadConfigFromID = function(idStr, UIElements)
-    if not idStr or idStr == "" then return end
+    if not idStr or idStr == "" then 
+        warn("[SETTING ERROR]: Mã ID nhập vào bị trống!")
+        return 
+    end
+    
+    -- Tự động lọc sạch khoảng trắng và dòng mới
+    idStr = string.gsub(idStr, "%s+", "")
     
     local success, jsonStr = pcall(function() return base64Decode(idStr) end)
-    if success and jsonStr then
-        local parseSuccess, parsed = pcall(function() return HttpService:JSONDecode(jsonStr) end)
+    if success and jsonStr and jsonStr ~= "" then
+        local parseSuccess, parsed = pcall(function() return HttpService:JSONEncode(jsonStr) end)
         if parseSuccess and type(parsed) == "table" then
             _G.HubLogic.ApplyConfigData(parsed, UIElements)
         else
